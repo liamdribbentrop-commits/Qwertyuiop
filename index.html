@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Arcade</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111827;
+  color: white;
+}
+
+header {
+  padding: 22px;
+  text-align: center;
+  background: #1f2937;
+  border-bottom: 2px solid #374151;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+header p {
+  margin: 8px 0 0;
+  color: #9ca3af;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 25px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.game {
+  background: #1f2937;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.3);
+}
+
+.game h2 {
+  margin-top: 0;
+}
+
+canvas {
+  width: 100%;
+  background: #000;
+  border-radius: 10px;
+  display: block;
+  cursor: crosshair;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.score {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.controls {
+  color: #9ca3af;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Tic Tac Toe */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 300px;
+  margin: auto;
+}
+
+.cell {
+  aspect-ratio: 1;
+  background: #374151;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Snake */
+#snakeCanvas {
+  image-rendering: pixelated;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🎮 Mini Arcade</h1>
+  <p>Play games right in your browser</p>
+</header>
+
+<div class="games">
+
+  <!-- TRUCK HOPPER -->
+  <div class="game">
+    <h2>🚚 Truck Hopper</h2>
+    <div class="score">Score: <span id="truckScore">0</span></div>
+
+    <canvas id="truckCanvas" width="600" height="300"></canvas>
+
+    <div class="controls">
+      Press SPACE or ↑ to jump from truck to truck.
+    </div>
+
+    <button onclick="startTruckGame()">Start Game</button>
+  </div>
+
+  <!-- TARGET BLASTER -->
+  <div class="game">
+    <h2>🎯 Target Blaster</h2>
+    <div class="score">Score: <span id="targetScore">0</span></div>
+    <div class="score">Time: <span id="targetTime">30</span></div>
+
+    <canvas id="targetCanvas" width="600" height="350"></canvas>
+
+    <div class="controls">
+      Click or tap the targets.
+    </div>
+
+    <button onclick="startTargetGame()">Start Game</button>
+  </div>
+
+  <!-- SNAKE -->
+  <div class="game">
+    <h2>🐍 Snake</h2>
+    <div class="score">Score: <span id="snakeScore">0</span></div>
+
+    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+
+    <div class="controls">
+      Use the arrow keys to move.
+    </div>
+
+    <button onclick="startSnake()">Start Game</button>
+  </div>
+
+  <!-- PONG -->
+  <div class="game">
+    <h2>🏓 Pong</h2>
+    <div class="score">
+      You: <span id="playerScore">0</span>
+      &nbsp; CPU: <span id="cpuScore">0</span>
+    </div>
+
+    <canvas id="pongCanvas" width="600" height="350"></canvas>
+
+    <div class="controls">
+      Use W/S or ↑/↓ to move your paddle.
+    </div>
+
+    <button onclick="startPong()">Start Game</button>
+  </div>
+
+  <!-- TIC TAC TOE -->
+  <div class="game">
+    <h2>❌⭕ Tic-Tac-Toe</h2>
+
+    <div id="board" class="board"></div>
+
+    <div id="ticMessage" style="text-align:center;margin-top:12px;">
+      Your turn!
+    </div>
+
+    <button onclick="resetTicTacToe()">Restart</button>
+  </div>
+
+</div>
+
+<script>
+
+/* =========================
+   TRUCK HOPPER
+========================= */
+
+const truckCanvas = document.getElementById("truckCanvas");
+const truckCtx = truckCanvas.getContext("2d");
+
+let truckGameRunning = false;
+let truckScore = 0;
+let truckPlayer;
+let trucks = [];
+let truckSpeed = 2;
+
+function startTruckGame() {
+  truckGameRunning = true;
+  truckScore = 0;
+  truckSpeed = 2;
+
+  document.getElementById("truckScore").textContent = 0;
+
+  truckPlayer = {
+    x: 70,
+    y: 210,
+    width: 30,
+    height: 40,
+    vy: 0,
+    jumping: false
+  };
+
+  trucks = [
+    {x: 40, y: 250, width: 130},
+    {x: 220, y: 220, width: 130},
+    {x: 410, y: 180, width: 130}
+  ];
+
+  requestAnimationFrame(truckLoop);
+}
+
+function truckJump() {
+  if (!truckGameRunning) return;
+
+  if (!truckPlayer.jumping) {
+    truckPlayer.vy = -10;
+    truckPlayer.jumping = true;
+  }
+}
+
+document.addEventListener("keydown", e => {
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    truckJump();
+  }
+});
+
+function truckLoop() {
+
+  if (!truckGameRunning) return;
+
+  truckCtx.clearRect(0,0,600,300);
+
+  // sky
+  truckCtx.fillStyle = "#172554";
+  truckCtx.fillRect(0,0,600,300);
+
+  // ground
+  truckCtx.fillStyle = "#111827";
+  truckCtx.fillRect(0,275,600,25);
+
+  // trucks
+  trucks.forEach(t => {
+
+    t.x -= truckSpeed;
+
+    if (t.x + t.width < 0) {
+      t.x = 620;
+      t.y = 160 + Math.random() * 90;
+      truckScore++;
+      document.getElementById("truckScore").textContent = truckScore;
+    }
+
+    truckCtx.fillStyle = "#dc2626";
+    truckCtx.fillRect(t.x,t.y,t.width,35);
+
+    truckCtx.fillStyle = "#111";
+    truckCtx.fillRect(t.x+15,t.y+25,25,25);
+    truckCtx.fillRect(t.x+t.width-40,t.y+25,25,25);
+
+    truckCtx.fillStyle = "#60a5fa";
+    truckCtx.fillRect(t.x+70,t.y+5,35,15);
+  });
+
+  // gravity
+  truckPlayer.vy += .5;
+  truckPlayer.y += truckPlayer.vy;
+
+  let standing = false;
+
+  trucks.forEach(t => {
+
+    if (
+      truckPlayer.x + truckPlayer.width > t.x &&
+      truckPlayer.x < t.x + t.width &&
+      truckPlayer.y + truckPlayer.height >= t.y &&
+      truckPlayer.y + truckPlayer.height <= t.y + 20 &&
+      truckPlayer.vy >= 0
+    ) {
+      truckPlayer.y = t.y - truckPlayer.height;
+      truckPlayer.vy = 0;
+      truckPlayer.jumping = false;
+      standing = true;
+    }
+
+  });
+
+  // player
+  truckCtx.fillStyle = "#facc15";
+  truckCtx.fillRect(
+    truckPlayer.x,
+    truckPlayer.y,
+    truckPlayer.width,
+    truckPlayer.height
+  );
+
+  // player face
+  truckCtx.fillStyle = "#111";
+  truckCtx.fillRect(truckPlayer.x+7,truckPlayer.y+8,5,5);
+  truckCtx.fillRect(truckPlayer.x+19,truckPlayer.y+8,5,5);
+
+  // fell
+  if (truckPlayer.y > 330) {
+    truckGameRunning = false;
+
+    truckCtx.fillStyle = "white";
+    truckCtx.font = "30px Arial";
+    truckCtx.fillText("Game Over!",210,140);
+
+    return;
+  }
+
+  requestAnimationFrame(truckLoop);
+}
+
+
+/* =========================
+   TARGET BLASTER
+========================= */
+
+const targetCanvas = document.getElementById("targetCanvas");
+const targetCtx = targetCanvas.getContext("2d");
+
+let targetGameRunning = false;
+let targetScore = 0;
+let targetTime = 30;
+let target = {};
+let targetTimer;
+
+function startTargetGame() {
+
+  targetGameRunning = true;
+  targetScore = 0;
+  targetTime = 30;
+
+  document.getElementById("targetScore").textContent = 0;
+  document.getElementById("targetTime").textContent = 30;
+
+  moveTarget();
+
+  clearInterval(targetTimer);
+
+  targetTimer = setInterval(() => {
+
+    targetTime--;
+
+    document.getElementById("targetTime").textContent =
+      targetTime;
+
+    if (targetTime <= 0) {
+      targetGameRunning = false;
+      clearInterval(targetTimer);
+
+      targetCtx.fillStyle = "white";
+      targetCtx.font = "32px Arial";
+      targetCtx.fillText("Time Up!",230,170);
+    }
+
+  },1000);
+
+  drawTargetGame();
+}
+
+function moveTarget() {
+
+  target = {
+    x: 40 + Math.random() * 520,
+    y: 40 + Math.random() * 240,
+    radius: 25
+  };
+
+}
+
+function drawTargetGame() {
+
+  if (!targetGameRunning) return;
+
+  targetCtx.fillStyle = "#020617";
+  targetCtx.fillRect(0,0,600,350);
+
+  // perspective floor
+  targetCtx.strokeStyle = "#334155";
+
+  for(let i=0;i<10;i++) {
+    targetCtx.beginPath();
+    targetCtx.moveTo(300,190);
+    targetCtx.lineTo(i*70,350);
+    targetCtx.stroke();
+  }
+
+  for(let y=210;y<350;y+=25) {
+    targetCtx.beginPath();
+    targetCtx.moveTo(0,y);
+    targetCtx.lineTo(600,y);
+    targetCtx.stroke();
+  }
+
+  // target
+  targetCtx.beginPath();
+  targetCtx.arc(
+    target.x,
+    target.y,
+    target.radius,
+    0,
+    Math.PI*2
+  );
+
+  targetCtx.fillStyle = "#ef4444";
+  targetCtx.fill();
+
+  targetCtx.beginPath();
+  targetCtx.arc(
+    target.x,
+    target.y,
+    15,
+    0,
+    Math.PI*2
+  );
+
+  targetCtx.fillStyle = "white";
+  targetCtx.fill();
+
+  targetCtx.beginPath();
+  targetCtx.arc(
+    target.x,
+    target.y,
+    7,
+    0,
+    Math.PI*2
+  );
+
+  targetCtx.fillStyle = "#ef4444";
+  targetCtx.fill();
+
+  requestAnimationFrame(drawTargetGame);
+}
+
+targetCanvas.addEventListener("click", e => {
+
+  if (!targetGameRunning) return;
+
+  const rect = targetCanvas.getBoundingClientRect();
+
+  const scaleX = targetCanvas.width / rect.width;
+  const scaleY = targetCanvas.height / rect.height;
+
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const distance =
+    Math.hypot(x-target.x,y-target.y);
+
+  if(distance < target.radius) {
+
+    targetScore++;
+
+    document.getElementById("targetScore").textContent =
+      targetScore;
+
+    moveTarget();
+  }
+
+});
+
+
+/* =========================
+   SNAKE
+========================= */
+
+const snakeCanvas =
+  document.getElementById("snakeCanvas");
+
+const snakeCtx =
+  snakeCanvas.getContext("2d");
+
+let snake = [];
+let food = {};
+let snakeDirection = "right";
+let snakeRunning = false;
+let snakeInterval;
+
+function startSnake() {
+
+  snake = [
+    {x:10,y:10},
+    {x:9,y:10},
+    {x:8,y:10}
+  ];
+
+  snakeDirection = "right";
+
+  document.getElementById("snakeScore").textContent = 0;
+
+  snakeRunning = true;
+
+  clearInterval(snakeInterval);
+
+  snakeInterval =
+    setInterval(snakeGame,100);
+}
+
+document.addEventListener("keydown", e => {
+
+  if(e.key === "ArrowUp" && snakeDirection !== "down")
+    snakeDirection = "up";
+
+  if(e.key === "ArrowDown" && snakeDirection !== "up")
+    snakeDirection = "down";
+
+  if(e.key === "ArrowLeft" && snakeDirection !== "right")
+    snakeDirection = "left";
+
+  if(e.key === "ArrowRight" && snakeDirection !== "left")
+    snakeDirection = "right";
+});
+
+function createFood() {
+
+  food = {
+    x: Math.floor(Math.random()*20),
+    y: Math.floor(Math.random()*20)
+  };
+
+}
+
+function snakeGame() {
+
+  if(!snakeRunning) return;
+
+  let head = {...snake[0]};
+
+  if(snakeDirection === "up") head.y--;
+  if(snakeDirection === "down") head.y++;
+  if(snakeDirection === "left") head.x--;
+  if(snakeDirection === "right") head.x++;
+
+  // wall collision
+  if(
+    head.x < 0 ||
+    head.x >= 20 ||
+    head.y < 0 ||
+    head.y >= 20
+  ) {
+    snakeRunning = false;
+    return;
+  }
+
+  // self collision
+  if(
+    snake.some(part =>
+      part.x === head.x &&
+      part.y === head.y
+    )
+  ) {
+    snakeRunning = false;
+    return;
+  }
+
+  snake.unshift(head);
+
+  if(head.x === food.x && head.y === food.y) {
+
+    let score =
+      snake.length - 3;
+
+    document.getElementById("snakeScore").textContent =
+      score;
+
+    createFood();
+
+  } else {
+    snake.pop();
+  }
+
+  drawSnake();
+}
+
+function drawSnake() {
+
+  snakeCtx.fillStyle = "#020617";
+  snakeCtx.fillRect(0,0,400,400);
+
+  snakeCtx.fillStyle = "#22c55e";
+
+  snake.forEach(part => {
+
+    snakeCtx.fillRect(
+      part.x*20,
+      part.y*20,
+      18,
+      18
+    );
+
+  });
+
+  snakeCtx.fillStyle = "#ef4444";
+
+  snakeCtx.fillRect(
+    food.x*20,
+    food.y*20,
+    18,
+    18
+  );
+}
+
+createFood();
+
+
+/* =========================
+   PONG
+========================= */
+
+const pongCanvas =
+  document.getElementById("pongCanvas");
+
+const pongCtx =
+  pongCanvas.getContext("2d");
+
+let pongRunning = false;
+
+let playerY = 140;
+let cpuY = 140;
+
+let ball = {
+  x:300,
+  y:175,
+  dx:4,
+  dy:3
+};
+
+let playerScore = 0;
+let cpuScore = 0;
+
+let keys = {};
+
+document.addEventListener("keydown", e => {
+  keys[e.key.toLowerCase()] = true;
+});
+
+document.addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
+
+function startPong() {
+
+  pongRunning = true;
+
+  playerScore = 0;
+  cpuScore = 0;
+
+  document.getElementById("playerScore").textContent = 0;
+  document.getElementById("cpuScore").textContent = 0;
+
+  playerY = 140;
+  cpuY = 140;
+
+  ball = {
+    x:300,
+    y:175,
+    dx:4,
+    dy:3
+  };
+
+  requestAnimationFrame(pongLoop);
+}
+
+function pongLoop() {
+
+  if(!pongRunning) return;
+
+  pongCtx.fillStyle = "#020617";
+  pongCtx.fillRect(0,0,600,350);
+
+  // middle line
+  pongCtx.strokeStyle = "#475569";
+  pongCtx.setLineDash([10,10]);
+
+  pongCtx.beginPath();
+  pongCtx.moveTo(300,0);
+  pongCtx.lineTo(300,350);
+  pongCtx.stroke();
+
+  pongCtx.setLineDash([]);
+
+  // player controls
+  if(keys["w"] || keys["arrowup"])
+    playerY -= 6;
+
+  if(keys["s"] || keys["arrowdown"])
+    playerY += 6;
+
+  playerY =
+    Math.max(0,Math.min(290,playerY));
+
+  // CPU
+  if(cpuY + 30 < ball.y)
+    cpuY += 3;
+
+  if(cpuY + 30 > ball.y)
+    cpuY -= 3;
+
+  cpuY =
+    Math.max(0,Math.min(290,cpuY));
+
+  // ball
+  ball.x += ball.dx;
+  ball.y += ball.dy;
+
+  if(ball.y < 0 || ball.y > 350)
+    ball.dy *= -1;
+
+  // player collision
+  if(
+    ball.x < 35 &&
+    ball.x > 20 &&
+    ball.y > playerY &&
+    ball.y < playerY+60
+  ) {
+    ball.dx = Math.abs(ball.dx);
+  }
+
+  // cpu collision
+  if(
+    ball.x > 565 &&
+    ball.x < 580 &&
+    ball.y > cpuY &&
+    ball.y < cpuY+60
+  ) {
+    ball.dx = -Math.abs(ball.dx);
+  }
+
+  // score
+  if(ball.x < 0) {
+
+    cpuScore++;
+
+    document.getElementById("cpuScore").textContent =
+      cpuScore;
+
+    resetBall();
+  }
+
+  if(ball.x > 600) {
+
+    playerScore++;
+
+    document.getElementById("playerScore").textContent =
+      playerScore;
+
+    resetBall();
+  }
+
+  // paddles
+  pongCtx.fillStyle = "white";
+
+  pongCtx.fillRect(
+    20,
+    playerY,
+    15,
+    60
+  );
+
+  pongCtx.fillRect(
+    565,
+    cpuY,
+    15,
+    60
+  );
+
+  // ball
+  pongCtx.beginPath();
+  pongCtx.arc(
+    ball.x,
+    ball.y,
+    8,
+    0,
+    Math.PI*2
+  );
+
+  pongCtx.fill();
+
+  requestAnimationFrame(pongLoop);
+}
+
+function resetBall() {
+
+  ball.x = 300;
+  ball.y = 175;
+
+  ball.dx =
+    Math.random() > .5 ? 4 : -4;
+
+  ball.dy =
+    Math.random() > .5 ? 3 : -3;
+}
+
+
+/* =========================
+   TIC TAC TOE
+========================= */
+
+let ticBoard = [
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  "",
+  ""
+];
+
+let ticGameOver = false;
+
+function drawTicTacToe() {
+
+  const board =
+    document.getElementById("board");
+
+  board.innerHTML = "";
+
+  ticBoard.forEach((value,index) => {
+
+    const cell =
+      document.createElement("div");
+
+    cell.className = "cell";
+
+    cell.textContent = value;
+
+    cell.onclick = () =>
+      playerMove(index);
+
+    board.appendChild(cell);
+  });
+}
+
+function playerMove(index) {
+
+  if(
+    ticBoard[index] !== "" ||
+    ticGameOver
+  ) return;
+
+  ticBoard[index] = "X";
+
+  drawTicTacToe();
+
+  if(checkWinner("X")) {
+
+    document.getElementById("ticMessage")
+      .textContent = "You win! 🎉";
+
+    ticGameOver = true;
+    return;
+  }
+
+  if(ticBoard.every(x => x !== "")) {
+
+    document.getElementById("ticMessage")
+      .textContent = "Draw!";
+
+    ticGameOver = true;
+    return;
+  }
+
+  setTimeout(computerMove,400);
+}
+
+function computerMove() {
+
+  if(ticGameOver) return;
+
+  let available =
+    ticBoard
+      .map((v,i) => v === "" ? i : null)
+      .filter(v => v !== null);
+
+  if(available.length === 0) return;
+
+  const move =
+    available[
+      Math.floor(
+        Math.random()*available.length
+      )
+    ];
+
+  ticBoard[move] = "O";
+
+  drawTicTacToe();
+
+  if(checkWinner("O")) {
+
+    document.getElementById("ticMessage")
+      .textContent = "Computer wins!";
+
+    ticGameOver = true;
+    return;
+  }
+
+  if(ticBoard.every(x => x !== "")) {
+
+    document.getElementById("ticMessage")
+      .textContent = "Draw!";
+
+    ticGameOver = true;
+    return;
+  }
+
+  document.getElementById("ticMessage")
+    .textContent = "Your turn!";
+}
+
+function checkWinner(player) {
+
+  const wins = [
+    [0,1,2],
+    [3,4,5],
+    [6,7,8],
+    [0,3,6],
+    [1,4,7],
+    [2,5,8],
+    [0,4,8],
+    [2,4,6]
+  ];
+
+  return wins.some(combo =>
+    combo.every(i => ticBoard[i] === player)
+  );
+}
+
+function resetTicTacToe() {
+
+  ticBoard = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ];
+
+  ticGameOver = false;
+
+  document.getElementById("ticMessage")
+    .textContent = "Your turn!";
+
+  drawTicTacToe();
+}
+
+drawTicTacToe();
+
+</script>
+
+</body>
+</html>
