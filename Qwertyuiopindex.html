@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Arcade</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111827;
+  color: white;
+}
+
+header {
+  padding: 22px;
+  text-align: center;
+  background: #1f2937;
+  border-bottom: 2px solid #374151;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 32px;
+}
+
+header p {
+  margin: 8px 0 0;
+  color: #9ca3af;
+}
+
+.games {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  padding: 25px;
+  max-width: 1200px;
+  margin: auto;
+}
+
+.game {
+  background: #1f2937;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 8px 25px rgba(0,0,0,.3);
+}
+
+.game h2 {
+  margin-top: 0;
+}
+
+canvas {
+  width: 100%;
+  background: #000;
+  border-radius: 10px;
+  display: block;
+  cursor: crosshair;
+}
+
+button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-top: 10px;
+  background: #2563eb;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #1d4ed8;
+}
+
+.score {
+  font-size: 18px;
+  margin: 8px 0;
+}
+
+.controls {
+  color: #9ca3af;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Tic Tac Toe */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  max-width: 300px;
+  margin: auto;
+}
+
+.cell {
+  aspect-ratio: 1;
+  background: #374151;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Snake */
+#snakeCanvas {
+  image-rendering: pixelated;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🎮 Mini Arcade</h1>
+  <p>Play games right in your browser</p>
+</header>
+
+<div class="games">
+
+  <!-- TRUCK HOPPER -->
+  <div class="game">
+    <h2>🚚 Truck Hopper</h2>
+    <div class="score">Score: <span id="truckScore">0</span></div>
+
+    <canvas id="truckCanvas" width="600" height="300"></canvas>
+
+    <div class="controls">
+      Press SPACE or ↑ to jump from truck to truck.
+    </div>
+
+    <button onclick="startTruckGame()">Start Game</button>
+  </div>
+
+  <!-- TARGET BLASTER -->
+  <div class="game">
+    <h2>🎯 Target Blaster</h2>
+    <div class="score">Score: <span id="targetScore">0</span></div>
+    <div class="score">Time: <span id="targetTime">30</span></div>
+
+    <canvas id="targetCanvas" width="600" height="350"></canvas>
+
+    <div class="controls">
+      Click or tap the targets.
+    </div>
+
+    <button onclick="startTargetGame()">Start Game</button>
+  </div>
+
+  <!-- SNAKE -->
+  <div class="game">
+    <h2>🐍 Snake</h2>
+    <div class="score">Score: <span id="snakeScore">0</span></div>
+
+    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+
+    <div class="controls">
+      Use
